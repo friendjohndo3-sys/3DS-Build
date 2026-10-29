@@ -1,89 +1,29 @@
-name: Build 3DS Homebrew
+#include <3ds.h>
+#include <stdio.h>
 
-on: [push, pull_request]
+// initial code for 3DS hello world using citro2d/libctru
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    container:
-      image: devkitpro/devkitarm:latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+int main(int argc, char **argv) {
+    // Initialize graphics
+    gfxInitDefault();
+    consoleInit(GFX_TOP, NULL);
 
-      - name: Fix Makefile & Compile
-        run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=/opt/devkitpro/devkitARM
-          export CTRULIB=/opt/devkitpro/libctru
-          export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH
+    printf("Hello World!\n");
 
-          # 1. Install makerom directly
-          if ! command -v makerom &> /dev/null; then
-            curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o /tmp/makerom.zip
-            unzip -q -o /tmp/makerom.zip -d /opt/devkitpro/tools/bin/
-            chmod +x /opt/devkitpro/tools/bin/makerom
-          fi
+    // Main loop
+    while (aptMainLoop()) {
+        hidScanInput();
+        u32 kDown = hidKeysDown();
 
-          # 2. Fix broken legacy libctru rule paths in Makefile
-          sed -i 's|$(DEVKITPRO)/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
-          sed -i 's|/opt/devkitpro/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
-          sed -i '/default_targets/d' Makefile
+        // Break out of the loop if Start is pressed
+        if (kDown & KEY_START) break;
 
-          # 3. Ensure default build rules exist if Makefile used legacy default_targets
-          if ! grep -q '\.3dsx' Makefile; then
-            printf '\nall: $(OUTPUT).3dsx\n$(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)\n$(OFILES_SOURCES): $(HFILES)\n$(OUTPUT).elf: $(OFILES)\n' >> Makefile
-          fi
+        gfxFlushBuffers();
+        gfxSwapBuffers();
+        gspWaitForVBlank();
+    }
 
-          # 4. Build 
-          make clean || true
-          make LD=arm-none-eabi-g++ CC=arm-none-eabi-gcc CXX=arm-none-eabi-g++
-
-          # 5. Guarantee .3dsx is built
-          for elf in *.elf build/*.elf; do
-            if [ -f "$elf" ]; then
-              base="${elf%.elf}"
-              if [ ! -f "${base}.3dsx" ]; then
-                3dsxtool "$elf" "${base}.3dsx"
-              fi
-            fi
-          done
-
-          # 6. Generate RSF Configuration and build .cia
-          cat << 'EOF' > template.rsf
-          BasicInfo:
-            Title                  := "Hello World"
-            ProductCode            := "CTR-P-HWLD"
-            Logo                   := None
-          RomHeader:
-            AccessControlInfo:
-              PermitDescriptor:
-                - 0x00000000
-              CoreVersion          := 2
-              TitleID              := 0x0004000007A12300
-              Dependency           := []
-          SystemInfo:
-            SaveDataSize           := 0K
-            StackSize              := 0x00008000
-          EOF
-
-          for elf in *.elf build/*.elf; do
-            if [ -f "$elf" ]; then
-              base="${elf%.elf}"
-              if [ ! -f "${base}.cia" ]; then
-                makerom -f cia -o "${base}.cia" -rsf template.rsf -target t -elf "$elf"
-              fi
-            fi
-          done
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: 3ds-homebrew-binaries
-          path: |
-            *.3dsx
-            *.cia
-            *.smdh
-            *.elf
-            build/*.3dsx
-            build/*.cia
+    // Exit
+    gfxExit();
+    return 0;
+}
