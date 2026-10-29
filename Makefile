@@ -38,10 +38,9 @@ CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 PICAFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
 
-export SHFILES	:=	$(PICAFILES:.v.pica=.shbin)
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-export OFILES_SH := $(PICAFILES:.v.pica=.shbin.o)
-export OFILES	:=	$(OFILES_SH) $(OFILES_SOURCES)
+export OFILES_SH      := $(PICAFILES:.v.pica=.shbin.o)
+export OFILES         := $(OFILES_SH) $(OFILES_SOURCES)
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					-I$(CURDIR)/$(BUILD) \
@@ -73,6 +72,15 @@ $(OUTPUT).3dsx: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 $(OFILES_SOURCES): $(OFILES_SH)
+
+# Rule to assemble PICA shaders into .shbin.o and auto-generate the _shbin.h header
+%.shbin.o %_shbin.h: %.v.pica
+	@echo "Compiling shader $<..."
+	@picasso -o $*.shbin $<
+	@bin2s $*.shbin | $(AS) $(ASFLAGS) -o $*.shbin.o
+	@echo "extern const u8 $*_shbin[];" > $*_shbin.h
+	@echo "extern const u8 $*_shbin_end[];" >> $*_shbin.h
+	@echo "extern const u32 $*_shbin_size;" >> $*_shbin.h
 
 -include $(DEPENDS)
 
