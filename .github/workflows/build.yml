@@ -11,49 +11,42 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Prepare DevkitPro Environment
-        run: |
-          dkp-pacman -Syu --noconfirm 3ds-dev 3dstools
-          mkdir -p /opt/devkitpro/libctru
-
-          # 1. Provide base_tools
-          if [ -f /opt/devkitpro/devkitARM/base_tools ]; then
-            ln -sf /opt/devkitpro/devkitARM/base_tools /opt/devkitpro/libctru/base_tools
-          fi
-
-          # 2. Provide default_targets expected by sub-make inside /build
-          cat << 'EOF' > /opt/devkitpro/libctru/default_targets
-          all: $(OUTPUT).3dsx $(OUTPUT).elf $(OUTPUT).cia
-
-          $(OUTPUT).3dsx: $(OUTPUT).elf
-          	@3dsxtool $< $@ $(_3DSXDEPS)
-
-          $(OUTPUT).elf: $(OFILES)
-          	$(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
-
-          %.o: %.c
-          	$(CC) $(CFLAGS) -c $< -o $@
-
-          %.o: %.cpp
-          	$(CXX) $(CXXFLAGS) -c $< -o $@
-          EOF
-
-      - name: Build Project
+      - name: Fix Makefile & Compile
         run: |
           export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=$DEVKITPRO/devkitARM
-          export CTRULIB=$DEVKITPRO/libctru
-          export PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          export CTRULIB=/opt/devkitpro/libctru
+          export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH
+
+          # 1. Install makerom & bannertool ONLY if your Makefile builds a .cia (Direct GitHub download, never hits devkitpro.org)
+          if ! command -v makerom &> /dev/null; then
+            curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o /tmp/makerom.zip
+            unzip -q -o /tmp/makerom.zip -d /opt/devkitpro/tools/bin/
+            chmod +x /opt/devkitpro/tools/bin/makerom
+          fi
+
+          # 2. Permanently fix broken legacy libctru paths in your Makefile
+          sed -i 's|$(DEVKITPRO)/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
+          sed -i 's|/opt/devkitpro/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
+          sed -i '/default_targets/d' Makefile
+
+          # 3. Ensure a default build target exists if your Makefile relies on legacy default_targets
+          if ! grep -q '\.3dsx:' Makefile; then
+            printf '\nall: $(OUTPUT).3dsx\n$(OUTPUT).3dsx: $(OUTPUT).elf\n$(OFILES_SOURCES): $(HFILES)\n' >> Makefile
+          fi
+
+          # 4. Build
+          make clean || true
           make
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: 3ds-homebrew-binaries
           path: |
             *.3dsx
             *.cia
+            *.smdh
             *.elf
             build/*.3dsx
             build/*.cia
