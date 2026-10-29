@@ -1,0 +1,11 @@
+BasicInfo:
+  Title                   : "My 3D Game"
+  ProductCode             : "CTR-P-GAME"
+  Logo                    : None
+TitleInfo:
+  UniqueId                : 0x07A12
+  Category                : Application
+Option:
+  UseOnSD                 : true
+SystemControlInfo:
+  SaveDataSize            : 0KB
