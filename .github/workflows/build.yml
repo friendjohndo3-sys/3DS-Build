@@ -18,7 +18,7 @@ jobs:
           export CTRULIB=/opt/devkitpro/libctru
           export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH
 
-          # 1. Install makerom directly (No dkp-pacman, so no 403 errors)
+          # 1. Install makerom directly
           if ! command -v makerom &> /dev/null; then
             curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o /tmp/makerom.zip
             unzip -q -o /tmp/makerom.zip -d /opt/devkitpro/tools/bin/
@@ -35,11 +35,11 @@ jobs:
             printf '\nall: $(OUTPUT).3dsx\n$(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)\n$(OFILES_SOURCES): $(HFILES)\n$(OUTPUT).elf: $(OFILES)\n' >> Makefile
           fi
 
-          # 4. Build (explicitly pass LD=arm-none-eabi-g++ so GNU Make never falls back to host x86_64 ld)
+          # 4. Build 
           make clean || true
           make LD=arm-none-eabi-g++ CC=arm-none-eabi-gcc CXX=arm-none-eabi-g++
 
-          # 5. Guarantee .3dsx is built if an .elf was generated
+          # 5. Guarantee .3dsx is built
           for elf in *.elf build/*.elf; do
             if [ -f "$elf" ]; then
               base="${elf%.elf}"
@@ -71,7 +71,7 @@ jobs:
             if [ -f "$elf" ]; then
               base="${elf%.elf}"
               if [ ! -f "${base}.cia" ]; then
-                makerom -f cia -o "${base}.cia" -rsf template.rsf -target t -exefile "$elf"
+                makerom -f cia -o "${base}.cia" -rsf template.rsf -target t -elf "$elf"
               fi
             fi
           done
