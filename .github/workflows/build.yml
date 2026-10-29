@@ -5,19 +5,17 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: devkitpro/devkitarm:latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install 3DS packages
-        run: |
-          dkp-pacman -Syu --noconfirm 3ds-dev 3dstools libctru
+      - name: Setup devkitPro
+        uses: devkitPro/actions/setup@v1
+        with:
+          packages: 3ds-dev 3dstools 3ds-libctru citro3d
 
       - name: Build Project
         run: |
-          export DEVKITPRO=/opt/devkitpro
-          export DEVKITARM=$DEVKITPRO/devkitARM
           make
           
       - name: Upload Artifacts
