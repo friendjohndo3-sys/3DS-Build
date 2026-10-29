@@ -11,20 +11,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install 3DS Packages & Fix Environment
+      - name: Install 3DS Packages & Symlink Rules
         run: |
-          # 1. Update and install all required 3DS toolchains
+          # 1. Install toolchains and build utilities
           dkp-pacman -Syu --noconfirm 3ds-dev 3dstools
 
-          # 2. Fix legacy Makefile path if it looks for base_tools inside libctru
-          if [ ! -f /opt/devkitpro/libctru/base_tools ]; then
-            mkdir -p /opt/devkitpro/libctru
-            if [ -f /opt/devkitpro/devkitARM/base_tools ]; then
-              ln -s /opt/devkitpro/devkitARM/base_tools /opt/devkitpro/libctru/base_tools
-            fi
-            if [ -f /opt/devkitpro/devkitARM/3ds_rules ]; then
-              ln -s /opt/devkitpro/devkitARM/3ds_rules /opt/devkitpro/libctru/3ds_rules
-            fi
+          # 2. Ensure /opt/devkitpro/libctru directory exists
+          mkdir -p /opt/devkitpro/libctru
+
+          # 3. Create symlinks for all legacy rule names expected by older Makefiles
+          for f in /opt/devkitpro/devkitARM/*; do
+            filename=$(basename "$f")
+            ln -sf "$f" "/opt/devkitpro/libctru/$filename"
+          done
+
+          # Map default_targets to 3ds_rules or base_rules
+          if [ -f /opt/devkitpro/devkitARM/3ds_rules ]; then
+            ln -sf /opt/devkitpro/devkitARM/3ds_rules /opt/devkitpro/libctru/default_targets
+          elif [ -f /opt/devkitpro/devkitARM/base_rules ]; then
+            ln -sf /opt/devkitpro/devkitARM/base_rules /opt/devkitpro/libctru/default_targets
           fi
 
       - name: Build Project
@@ -45,3 +50,7 @@ jobs:
             *.3dsx
             *.cia
             *.smdh
+            build/*.3dsx
+            build/*.cia
+            output/*.3dsx
+            output/*.cia
