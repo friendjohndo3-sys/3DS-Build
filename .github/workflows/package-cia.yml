@@ -39,8 +39,6 @@ jobs:
             Category                : Application
           Option:
             UseOnSD                 : true
-          AccessControlInfo:
-            CoreVersion             : 2
           SystemControlInfo:
             SaveDataSize            : 0KB
           EOF
