@@ -66,7 +66,19 @@ clean:
 
 else
 
-# 3. BOTTOM: Include the modern 3DS rules (replaces default_targets)
+DEPENDS	:=	$(OFILES:.o=.d)
+
+# 1. Include the recipes for 3DS files
 include $(DEVKITARM)/3ds_rules
+
+# 2. Tell Make EXACTLY what targets to build
+.PHONY: all
+all: $(OUTPUT).3dsx $(OUTPUT).elf
+
+# 3. Link the targets to your source objects
+$(OUTPUT).3dsx: $(OUTPUT).elf
+$(OUTPUT).elf: $(OFILES)
+
+-include $(DEPENDS)
 
 endif
