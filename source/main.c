@@ -1,33 +1,29 @@
 #include <3ds.h>
-#initial code for 3DS hello world using citro2d/libctru
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <citro3d.h>
 
-int main(int argc, char* argv[]) {
-    // Initialize graphics and console on top screen
+// initial code for 3DS hello world using citro2d/libctru
+
+int main(int argc, char **argv) {
+    // Initialize graphics
     gfxInitDefault();
     consoleInit(GFX_TOP, NULL);
 
-    printf("\x1b[10;12HHello World!\n");
-    printf("\x1b[12;8HPress START to exit.\n");
+    printf("Hello World!\n");
 
     // Main loop
     while (aptMainLoop()) {
         hidScanInput();
-
         u32 kDown = hidKeysDown();
-        if (kDown & KEY_START) break; // break in order to return to hbmenu
 
-        // Flush and swap framebuffers
+        // Break out of the loop if Start is pressed
+        if (kDown & KEY_START) break;
+
         gfxFlushBuffers();
         gfxSwapBuffers();
-
-        // Wait for VBlank
         gspWaitForVBlank();
     }
 
+    // Exit
     gfxExit();
     return 0;
 }
