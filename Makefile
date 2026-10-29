@@ -30,7 +30,8 @@ ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
 export TOPDIR	:=	$(CURDIR)
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
+export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
@@ -38,8 +39,9 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 PICAFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
 
 export SHFILES	:=	$(PICAFILES:.v.pica=.shbin)
-export SHHEADERS:=	$(PICAFILES:.v.pica=_shbin.h)
-export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o) $(PICAFILES:.v.pica=.shbin.o)
+export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES_SH := $(PICAFILES:.v.pica=.shbin.o)
+export OFILES	:=	$(OFILES_SH) $(OFILES_SOURCES)
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					-I$(CURDIR)/$(BUILD) \
@@ -67,10 +69,10 @@ include $(DEVKITARM)/3ds_rules
 .PHONY: all
 all: $(OUTPUT).3dsx $(OUTPUT).elf
 
-$(OFILES): $(SHHEADERS)
-
 $(OUTPUT).3dsx: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
+
+$(OFILES_SOURCES): $(OFILES_SH)
 
 -include $(DEPENDS)
 
