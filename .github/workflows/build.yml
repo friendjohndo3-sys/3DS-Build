@@ -18,26 +18,36 @@ jobs:
           export CTRULIB=/opt/devkitpro/libctru
           export PATH=/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH
 
-          # 1. Install makerom & bannertool ONLY if your Makefile builds a .cia (Direct GitHub download, never hits devkitpro.org)
+          # 1. Install makerom & bannertool ONLY if needed for .cia
           if ! command -v makerom &> /dev/null; then
             curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o /tmp/makerom.zip
             unzip -q -o /tmp/makerom.zip -d /opt/devkitpro/tools/bin/
             chmod +x /opt/devkitpro/tools/bin/makerom
           fi
 
-          # 2. Permanently fix broken legacy libctru paths in your Makefile
+          # 2. Fix broken legacy libctru rule paths in Makefile
           sed -i 's|$(DEVKITPRO)/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
           sed -i 's|/opt/devkitpro/libctru/base_tools|$(DEVKITARM)/3ds_rules|g' Makefile
           sed -i '/default_targets/d' Makefile
 
-          # 3. Ensure a default build target exists if your Makefile relies on legacy default_targets
-          if ! grep -q '\.3dsx:' Makefile; then
-            printf '\nall: $(OUTPUT).3dsx\n$(OUTPUT).3dsx: $(OUTPUT).elf\n$(OFILES_SOURCES): $(HFILES)\n' >> Makefile
+          # 3. Ensure default build rules exist if Makefile used legacy default_targets
+          if ! grep -q '\.3dsx' Makefile; then
+            printf '\nall: $(OUTPUT).3dsx\n$(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)\n$(OFILES_SOURCES): $(HFILES)\n$(OUTPUT).elf: $(OFILES)\n' >> Makefile
           fi
 
-          # 4. Build
+          # 4. Build (explicitly pass LD=arm-none-eabi-g++ so GNU Make never falls back to host x86_64 ld)
           make clean || true
-          make
+          make LD=arm-none-eabi-g++ CC=arm-none-eabi-gcc CXX=arm-none-eabi-g++
+
+          # 5. Guarantee .3dsx is built if an .elf was generated
+          for elf in *.elf build/*.elf; do
+            if [ -f "$elf" ]; then
+              base="${elf%.elf}"
+              if [ ! -f "${base}.3dsx" ]; then
+                3dsxtool "$elf" "${base}.3dsx"
+              fi
+            fi
+          done
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
