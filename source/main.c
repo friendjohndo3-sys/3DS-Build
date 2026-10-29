@@ -1,3 +1,4 @@
+#include <3ds.h>
 #initial code for 3DS hello world using citro2d/libctru
 #include <stdio.h>
 #include <stdlib.h>
