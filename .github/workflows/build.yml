@@ -5,21 +5,40 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro
-        uses: devkitPro/actions/setup@v1
-        with:
-          packages: 3ds-dev 3dstools 3ds-libctru citro3d
+      - name: Install 3DS Packages & Fix Environment
+        run: |
+          # 1. Update and install all required 3DS toolchains
+          dkp-pacman -Syu --noconfirm 3ds-dev 3dstools
+
+          # 2. Fix legacy Makefile path if it looks for base_tools inside libctru
+          if [ ! -f /opt/devkitpro/libctru/base_tools ]; then
+            mkdir -p /opt/devkitpro/libctru
+            if [ -f /opt/devkitpro/devkitARM/base_tools ]; then
+              ln -s /opt/devkitpro/devkitARM/base_tools /opt/devkitpro/libctru/base_tools
+            fi
+            if [ -f /opt/devkitpro/devkitARM/3ds_rules ]; then
+              ln -s /opt/devkitpro/devkitARM/3ds_rules /opt/devkitpro/libctru/3ds_rules
+            fi
+          fi
 
       - name: Build Project
         run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=$DEVKITPRO/devkitARM
+          export CTRULIB=$DEVKITPRO/libctru
+          export PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH
+          make clean || true
           make
-          
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: 3ds-homebrew-binaries
           path: |
