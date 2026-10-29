@@ -9,7 +9,6 @@ on:
 jobs:
   build-cia:
     runs-on: ubuntu-latest
-    # Only run if the main build successfully compiled the .elf and .3dsx
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
@@ -32,19 +31,18 @@ jobs:
         run: |
           cat << 'EOF' > template.rsf
           BasicInfo:
-            Title                  := "Hello World"
-            ProductCode            := "CTR-P-HWLD"
-            Logo                   := None
-          RomHeader:
-            AccessControlInfo:
-              PermitDescriptor:
-                - 0x00000000
-              CoreVersion          := 2
-              TitleID              := 0x0004000007A12300
-              Dependency           := []
-          SystemInfo:
-            SaveDataSize           := 0K
-            StackSize              := 0x00008000
+            Title                   : "Hello World"
+            ProductCode             : "CTR-P-HWLD"
+            Logo                    : None
+          TitleInfo:
+            UniqueId                : 0x07A12
+            Category                : Application
+          Option:
+            UseOnSD                 : true
+          AccessControlInfo:
+            CoreVersion             : 2
+          SystemControlInfo:
+            SaveDataSize            : 0KB
           EOF
 
       - name: Convert ELF to CIA
