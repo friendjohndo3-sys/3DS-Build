@@ -7,7 +7,12 @@ $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path>/devki
 endif
 
 export DEVKITARM ?= $(DEVKITPRO)/devkitARM
-include $(DEVKITPRO)/libctru/base_tools
+
+# 1. TOP: Include the base tools to define CC, CXX, etc.
+include $(DEVKITARM)/base_tools
+
+# 2. Force the linker to use the C++ compiler to avoid x86_64 ld fallbacks
+export LD := $(CXX)
 
 TARGET		:= hello_world_3ds
 BUILD		:= build
@@ -20,7 +25,6 @@ CFLAGS		:= -g -Wall -O2 -mword-relocations -ffunction-sections \
 			   $(INCLUDE)
 
 CXXFLAGS	:= $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
-
 ASFLAGS		:= -g -march=armv6k -mtune=mpcore -mfloat-abi=hard
 
 LDFLAGS		:= -specs=3dsx.specs -g -march=armv6k -mtune=mpcore -mfloat-abi=hard
@@ -28,7 +32,7 @@ LDFLAGS		:= -specs=3dsx.specs -g -march=armv6k -mtune=mpcore -mfloat-abi=hard
 LIBS		:= -lcitro3d -lctru -lm
 
 # ---------------------------------------------------------------------------
-# If you want to build a CIA later using makerom, you need an RSF file.
+# Build Rules
 # ---------------------------------------------------------------------------
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -47,6 +51,8 @@ export OFILES	:=	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					-I$(DEVKITPRO)/libctru/include
 
+export LIBPATHS :=  -L$(DEVKITPRO)/libctru/lib
+
 .PHONY: all clean
 
 all: $(BUILD)
@@ -60,6 +66,7 @@ clean:
 
 else
 
-include $(DEVKITPRO)/libctru/default_targets
+# 3. BOTTOM: Include the modern 3DS rules (replaces default_targets)
+include $(DEVKITARM)/3ds_rules
 
 endif
