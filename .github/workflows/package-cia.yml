@@ -1,0 +1,64 @@
+name: Package CIA
+
+on:
+  workflow_run:
+    workflows: ["Build 3DS Homebrew"]
+    types:
+      - completed
+
+jobs:
+  build-cia:
+    runs-on: ubuntu-latest
+    # Only run if the main build successfully compiled the .elf and .3dsx
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Download Artifacts from Main Build
+        uses: actions/download-artifact@v4
+        with:
+          name: 3ds-homebrew-binaries
+          path: cia-build/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install makerom
+        run: |
+          curl -sL https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip -o makerom.zip
+          unzip -q makerom.zip
+          sudo mv makerom /usr/local/bin/
+          sudo chmod +x /usr/local/bin/makerom
+
+      - name: Generate RSF Configuration
+        run: |
+          cat << 'EOF' > template.rsf
+          BasicInfo:
+            Title                  := "Hello World"
+            ProductCode            := "CTR-P-HWLD"
+            Logo                   := None
+          RomHeader:
+            AccessControlInfo:
+              PermitDescriptor:
+                - 0x00000000
+              CoreVersion          := 2
+              TitleID              := 0x0004000007A12300
+              Dependency           := []
+          SystemInfo:
+            SaveDataSize           := 0K
+            StackSize              := 0x00008000
+          EOF
+
+      - name: Convert ELF to CIA
+        run: |
+          cd cia-build
+          for elf in *.elf; do
+            if [ -f "$elf" ]; then
+              base="${elf%.elf}"
+              makerom -f cia -o "${base}.cia" -rsf ../template.rsf -target t -elf "$elf"
+            fi
+          done
+
+      - name: Upload CIA File
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3ds-cia-binary
+          path: cia-build/*.cia
