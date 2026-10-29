@@ -8,7 +8,10 @@ endif
 
 export DEVKITARM ?= $(DEVKITPRO)/devkitARM
 include $(DEVKITARM)/base_tools
+
+# FIX: Explicitly define the Linker and Assembler so Make doesn't fall back to Ubuntu's x86 tools
 export LD := $(CXX)
+export AS := arm-none-eabi-as
 
 TARGET		:= simple_3d_game
 BUILD		:= build
