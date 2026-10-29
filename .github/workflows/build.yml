@@ -12,7 +12,7 @@ jobs:
 
       - name: Install 3DS packages
         run: |
-          dkp-pacman -Syu --noconfirm 3ds-dev 3ds-tools
+          dkp-pacman -Syu --noconfirm 3ds-dev 3dstools
 
       - name: Build Project
         run: |
